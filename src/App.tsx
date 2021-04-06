@@ -10,6 +10,7 @@ import AddShoppingCartIcon from '@material-ui/icons/AddShoppingCart';
 import Badge from '@material-ui/core/Badge';
 // Styles
 import { Wrapper, StyledButton } from './App.styles';
+import { Button } from '@material-ui/core';
 // Types
 export type CartItemType = {
   id: number;
@@ -22,20 +23,29 @@ export type CartItemType = {
 };
 
 const getProducts = async (): Promise<CartItemType[]> =>
-  await (await fetch('https://fakestoreapi.com/products')).json();
+  await (await fetch('https://fakestoreapi.com/products/category/women%20clothing')).json();
+
+const getOffers = async (): Promise<CartItemType[]> =>
+  await (await fetch('https://fakestoreapi.com/products/category/jewelery?limit=2')).json();
 
 const App = () => {
   const [cartOpen, setCartOpen] = useState(false);
   const [cartItems, setCartItems] = useState([] as CartItemType[]);
-  const { data, isLoading, error } = useQuery<CartItemType[]>(
+  const getProductsData = useQuery<CartItemType[]>(
     'products',
     getProducts
   );
-  console.log(data);
+  const getOffersData = useQuery<CartItemType[]>(
+    'offers',
+    getOffers
+);
+  console.log(getProductsData.data);
+  console.log(getOffersData.data);
 
   const getTotalItems = (items: CartItemType[]) =>
     items.reduce((ack: number, item) => ack + item.amount, 0);
-
+  
+  
   const handleAddToCart = (clickedItem: CartItemType) => {
     setCartItems(prev => {
       // 1. Is the item already added in the cart?
@@ -53,6 +63,8 @@ const App = () => {
     });
   };
 
+  
+
   const handleRemoveFromCart = (id: number) => {
     setCartItems(prev =>
       prev.reduce((ack, item) => {
@@ -66,17 +78,38 @@ const App = () => {
     );
   };
 
-  if (isLoading) return <LinearProgress />;
-  if (error) return <div>Something went wrong ...</div>;
+  if (getProductsData.isLoading && getOffersData.isLoading) return <LinearProgress />;
+  if (getProductsData.error && getOffersData.error) return <div>Something went wrong ...</div>;
 
   return (
     <Wrapper>
       <Drawer anchor='right' open={cartOpen} onClose={() => setCartOpen(false)}>
+      <StyledButton onClick={() => setCartOpen(false)}>Close Cart</StyledButton>
         <Cart
           cartItems={cartItems}
           addToCart={handleAddToCart}
           removeFromCart={handleRemoveFromCart}
         />
+        <Grid
+          container
+          direction="column"
+          justify="center"
+          alignItems="center"
+          spacing={4}
+          >
+        <h2>Customers Who Bought This Item Also Bought</h2>
+        {getOffersData.data?.map(item => (
+          <Grid item key={item.id} xs={12} sm={4}>
+            <Item item={item} handleAddToCart={handleAddToCart} />
+          </Grid>
+        ))}
+          <Button
+            size='small'
+            disableElevation
+            variant='contained'
+            onClick={() => alert('There should be information about the selected offers')}
+          >continue to checkout</Button>
+        </Grid>
       </Drawer>
       <StyledButton onClick={() => setCartOpen(true)}>
         <Badge badgeContent={getTotalItems(cartItems)} color='error'>
@@ -84,7 +117,7 @@ const App = () => {
         </Badge>
       </StyledButton>
       <Grid container spacing={3}>
-        {data?.map(item => (
+        {getProductsData.data?.map(item => (
           <Grid item key={item.id} xs={12} sm={4}>
             <Item item={item} handleAddToCart={handleAddToCart} />
           </Grid>
